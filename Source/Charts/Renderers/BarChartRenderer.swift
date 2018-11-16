@@ -438,11 +438,33 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
             if (dataSet.hasRoundedCorners && isTopRect)
             {
                 let cornerRadius = barRect.width / 2.0
-                let path = UIBezierPath.init(roundedRect: barRect,
-                                             byRoundingCorners: UIRectCorner.topLeft.union(UIRectCorner.topRight),
+              
+//                var newRec = barRect
+                var newRec = CGRect(x: 0.0, y: 0.0, width: 0.0, height: 0.0)
+                newRec.size.width = barRect.width
+                newRec.size.height = newRec.width
+                
+                UIGraphicsPushContext(context)
+                UIGraphicsBeginImageContextWithOptions(newRec.size, false, 0.0)
+                let imageContext = UIGraphicsGetCurrentContext()
+                imageContext?.saveGState()
+                
+                let path = UIBezierPath.init(roundedRect: newRec,
+                                             byRoundingCorners: [.topLeft, .topRight],
                                              cornerRadii: CGSize(width: cornerRadius,
                                                                  height: cornerRadius))
-                path.fill()
+                imageContext?.setFillColor(UIColor.black.cgColor)
+                imageContext?.addPath(path.cgPath)
+                imageContext?.drawPath(using: .fill)
+                
+                let image = UIGraphicsGetImageFromCurrentImageContext()!
+        
+                UIGraphicsPopContext()
+                UIGraphicsEndImageContext()
+                
+//                context.clip(to: newRec, mask: image.cgImage!)
+                context.fill(barRect)
+                context.draw(image.cgImage!, in: newRec)
                 
                 if drawBorder
                 {
@@ -833,6 +855,7 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                 if (set.hasRoundedCorners)
                 {
                     let cornerRadius = barRect.width / 2.0
+                    
                     let path = UIBezierPath.init(roundedRect: barRect,
                                                  byRoundingCorners: UIRectCorner.topLeft.union(UIRectCorner.topRight),
                                                  cornerRadii: CGSize(width: cornerRadius, height: cornerRadius))
