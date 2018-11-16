@@ -39,4 +39,7 @@ public protocol IBarChartDataSet: IBarLineScatterCandleBubbleChartDataSet
     
     /// array of labels used to describe the different values of the stacked bars
     var stackLabels: [String] { get set }
+    
+    /// - returns: 'true' if the bars have rounded corners
+    var hasRoundedCorners : Bool { get set }
 }

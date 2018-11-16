@@ -406,6 +406,9 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
         {
             context.setFillColor(dataSet.color(atIndex: 0).cgColor)
         }
+        
+        context.setStrokeColor(borderColor.cgColor)
+        context.setLineWidth(borderWidth)
 
         // In case the chart is stacked, we need to accomodate individual bars within accessibilityOrdereredElements
         let isStacked = dataSet.isStacked
@@ -431,15 +434,30 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                 context.setFillColor(dataSet.color(atIndex: j).cgColor)
             }
             
-            context.fill(barRect)
-            
-            if drawBorder
+            let isTopRect = (j % stackSize == stackSize - 1)
+            if (dataSet.hasRoundedCorners && isTopRect)
             {
-                context.setStrokeColor(borderColor.cgColor)
-                context.setLineWidth(borderWidth)
-                context.stroke(barRect)
+                let cornerRadius = barRect.width / 2.0
+                let path = UIBezierPath.init(roundedRect: barRect,
+                                             byRoundingCorners: UIRectCorner.topLeft.union(UIRectCorner.topRight),
+                                             cornerRadii: CGSize(width: cornerRadius,
+                                                                 height: cornerRadius))
+                path.fill()
+                
+                if drawBorder
+                {
+                    path.stroke()
+                }
             }
-
+            else {
+                context.fill(barRect)
+                
+                if drawBorder
+                {
+                    context.stroke(barRect)
+                }
+            }
+            
             // Create and append the corresponding accessibility element to accessibilityOrderedElements
             if let chart = dataProvider as? BarChartView
             {
@@ -811,7 +829,19 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                 
                 setHighlightDrawPos(highlight: high, barRect: barRect)
                 
-                context.fill(barRect)
+//                context.fill(barRect)
+                if (set.hasRoundedCorners)
+                {
+                    let cornerRadius = barRect.width / 2.0
+                    let path = UIBezierPath.init(roundedRect: barRect,
+                                                 byRoundingCorners: UIRectCorner.topLeft.union(UIRectCorner.topRight),
+                                                 cornerRadii: CGSize(width: cornerRadius, height: cornerRadius))
+                    path.fill()
+                }
+                else
+                {
+                    context.fill(barRect)
+                }
             }
         }
         

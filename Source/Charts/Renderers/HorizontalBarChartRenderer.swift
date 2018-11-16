@@ -268,15 +268,30 @@ open class HorizontalBarChartRenderer: BarChartRenderer
                 context.setFillColor(dataSet.color(atIndex: j).cgColor)
             }
 
-            context.fill(barRect)
-
-            if drawBorder
+            let isTopRect = (j % stackSize == stackSize - 1)
+            if (dataSet.hasRoundedCorners && isTopRect)
             {
-                context.setStrokeColor(borderColor.cgColor)
-                context.setLineWidth(borderWidth)
-                context.stroke(barRect)
+                let cornerRadius = barRect.height / 2.0
+                let path = UIBezierPath.init(roundedRect: barRect,
+                                             byRoundingCorners: UIRectCorner.topRight.union(UIRectCorner.bottomRight),
+                                             cornerRadii: CGSize(width: cornerRadius,
+                                                                 height: cornerRadius))
+                path.fill()
+                
+                if drawBorder
+                {
+                    path.stroke()
+                }
             }
-
+            else {
+                context.fill(barRect)
+                
+                if drawBorder
+                {
+                    context.stroke(barRect)
+                }
+            }
+            
             // Create and append the corresponding accessibility element to accessibilityOrderedElements (see BarChartRenderer)
             if let chart = dataProvider as? BarChartView
             {
@@ -628,5 +643,83 @@ open class HorizontalBarChartRenderer: BarChartRenderer
     internal override func setHighlightDrawPos(highlight high: Highlight, barRect: CGRect)
     {
         high.setDraw(x: barRect.midY, y: barRect.origin.x + barRect.size.width)
+    }
+    
+    open override func drawHighlighted(context: CGContext, indices: [Highlight])
+    {
+        guard
+            let dataProvider = dataProvider,
+            let barData = dataProvider.barData
+            else { return }
+        
+        context.saveGState()
+        
+        var barRect = CGRect()
+        
+        for high in indices
+        {
+            guard
+                let set = barData.getDataSetByIndex(high.dataSetIndex) as? IBarChartDataSet,
+                set.isHighlightEnabled
+                else { continue }
+            
+            if let e = set.entryForXValue(high.x, closestToY: high.y) as? BarChartDataEntry
+            {
+                if !isInBoundsX(entry: e, dataSet: set)
+                {
+                    continue
+                }
+                
+                let trans = dataProvider.getTransformer(forAxis: set.axisDependency)
+                
+                context.setFillColor(set.highlightColor.cgColor)
+                context.setAlpha(set.highlightAlpha)
+                
+                let isStack = high.stackIndex >= 0 && e.isStacked
+                
+                let y1: Double
+                let y2: Double
+                
+                if isStack
+                {
+                    if dataProvider.isHighlightFullBarEnabled
+                    {
+                        y1 = e.positiveSum
+                        y2 = -e.negativeSum
+                    }
+                    else
+                    {
+                        let range = e.ranges?[high.stackIndex]
+                        
+                        y1 = range?.from ?? 0.0
+                        y2 = range?.to ?? 0.0
+                    }
+                }
+                else
+                {
+                    y1 = e.y
+                    y2 = 0.0
+                }
+                
+                prepareBarHighlight(x: e.x, y1: y1, y2: y2, barWidthHalf: barData.barWidth / 2.0, trans: trans, rect: &barRect)
+                
+                setHighlightDrawPos(highlight: high, barRect: barRect)
+                
+                if (set.hasRoundedCorners)
+                {
+                    let cornerRadius = barRect.width / 2.0
+                    let path = UIBezierPath.init(roundedRect: barRect,
+                                                 byRoundingCorners: UIRectCorner.topRight.union(UIRectCorner.bottomRight),
+                                                 cornerRadii: CGSize(width: cornerRadius, height: cornerRadius))
+                    path.fill()
+                }
+                else
+                {
+                    context.fill(barRect)
+                }
+            }
+        }
+        
+        context.restoreGState()
     }
 }
