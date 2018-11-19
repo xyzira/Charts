@@ -414,7 +414,8 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
         let isStacked = dataSet.isStacked
         let stackSize = isStacked ? dataSet.stackSize : 1
 
-        for j in stride(from: 0, to: buffer.rects.count, by: 1)
+        // Order is important here
+        for j in stride(from: buffer.rects.count-1, through: 0, by: -1)//buffer.rects.count-1...0//stride(from: buffer.rects.count-1, to: 0, by: -1)
         {
             let barRect = buffer.rects[j]
 
@@ -435,36 +436,30 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
             }
             
             let isTopRect = (j % stackSize == stackSize - 1)
+            let isBottomRect = (j % stackSize == 0)
             if (dataSet.hasRoundedCorners && isTopRect)
             {
+                context.saveGState()
                 let cornerRadius = barRect.width / 2.0
               
-//                var newRec = barRect
-                var newRec = CGRect(x: 0.0, y: 0.0, width: 0.0, height: 0.0)
-                newRec.size.width = barRect.width
-                newRec.size.height = newRec.width
+                var pathRect = barRect
+                var height = barRect.height
+                let bottomStackElementIndex = j - stackSize + 1
+                for index in bottomStackElementIndex..<j {
+                    height += buffer.rects[index].height
+                }
+                pathRect.size.height = height
+
+                let path = UIBezierPath.init(roundedRect: pathRect,
+                    byRoundingCorners: [.topLeft, .topRight],
+                    cornerRadii: CGSize(width: cornerRadius,
+                        height: cornerRadius))
                 
-                UIGraphicsPushContext(context)
-                UIGraphicsBeginImageContextWithOptions(newRec.size, false, 0.0)
-                let imageContext = UIGraphicsGetCurrentContext()
-                imageContext?.saveGState()
+                context.addPath(path.cgPath)
+                context.clip()
                 
-                let path = UIBezierPath.init(roundedRect: newRec,
-                                             byRoundingCorners: [.topLeft, .topRight],
-                                             cornerRadii: CGSize(width: cornerRadius,
-                                                                 height: cornerRadius))
-                imageContext?.setFillColor(UIColor.black.cgColor)
-                imageContext?.addPath(path.cgPath)
-                imageContext?.drawPath(using: .fill)
-                
-                let image = UIGraphicsGetImageFromCurrentImageContext()!
-        
-                UIGraphicsPopContext()
-                UIGraphicsEndImageContext()
-                
-//                context.clip(to: newRec, mask: image.cgImage!)
-                context.fill(barRect)
-                context.draw(image.cgImage!, in: newRec)
+                context.addRect(barRect)
+                context.fillPath()
                 
                 if drawBorder
                 {
@@ -472,12 +467,17 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                 }
             }
             else {
-                context.fill(barRect)
+                context.addRect(barRect)
+                context.fillPath()
                 
                 if drawBorder
                 {
                     context.stroke(barRect)
                 }
+            }
+            
+            if (dataSet.hasRoundedCorners && isBottomRect) {
+                context.restoreGState()
             }
             
             // Create and append the corresponding accessibility element to accessibilityOrderedElements
