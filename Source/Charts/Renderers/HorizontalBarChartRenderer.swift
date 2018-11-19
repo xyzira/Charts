@@ -248,64 +248,80 @@ open class HorizontalBarChartRenderer: BarChartRenderer
         let isStacked = dataSet.isStacked
         let stackSize = isStacked ? dataSet.stackSize : 1
 
-        for j in stride(from: 0, to: buffer.rects.count, by: 1)
+        // Order is important here
+        for firstIndexInBar in stride(from: 0, to: buffer.rects.count, by: stackSize)
         {
-            let barRect = buffer.rects[j]
+            context.saveGState()
             
-            if (!viewPortHandler.isInBoundsTop(barRect.origin.y + barRect.size.height))
-            {
-                break
-            }
+            let lastIndexInBar = firstIndexInBar + stackSize - 1
+            let firstRectInBar = buffer.rects[firstIndexInBar]
+            let cornerRadius = firstRectInBar.width / 2.0
             
-            if (!viewPortHandler.isInBoundsBottom(barRect.origin.y))
-            {
-                continue
+            var pathRect = firstRectInBar
+            var width: CGFloat = 0
+            for index in firstIndexInBar...lastIndexInBar {
+                width += buffer.rects[index].width
             }
+            pathRect.size.width = width
             
-            if !isSingleColor
-            {
-                // Set the color for the currently drawn value. If the index is out of bounds, reuse colors.
-                context.setFillColor(dataSet.color(atIndex: j).cgColor)
-            }
-
-            let isTopRect = (j % stackSize == stackSize - 1)
-            if (!dataSet.roundedCorners.isEmpty && isTopRect)
-            {
-                let cornerRadius = barRect.height / 2.0
-                let path = UIBezierPath.init(roundedRect: barRect,
-                                             byRoundingCorners: UIRectCorner.topRight.union(UIRectCorner.bottomRight),
-                                             cornerRadii: CGSize(width: cornerRadius,
-                                                                 height: cornerRadius))
-                path.fill()
+            let path = UIBezierPath.init(roundedRect: pathRect,
+                                         byRoundingCorners: dataSet.roundedCorners,
+                                         cornerRadii: CGSize(width: cornerRadius,
+                                                             height: cornerRadius))
+            
+            context.addPath(path.cgPath)
+            context.clip()
+            
+            for index in firstIndexInBar...lastIndexInBar {
                 
-                if drawBorder
-                {
-                    path.stroke()
-                }
-            }
-            else {
-                context.fill(barRect)
+                let barRect = buffer.rects[index]
                 
-                if drawBorder
+                if (!viewPortHandler.isInBoundsLeft(barRect.origin.x + barRect.size.width))
                 {
-                    context.stroke(barRect)
+                    continue
                 }
+                
+                if (!viewPortHandler.isInBoundsRight(barRect.origin.x))
+                {
+                    break
+                }
+                
+                if !isSingleColor
+                {
+                    // Set the color for the currently drawn value. If the index is out of bounds, reuse colors.
+                    context.setFillColor(dataSet.color(atIndex: index).cgColor)
+                }
+                
+                context.addRect(barRect)
+                context.fillPath()
+                
+                // Create and append the corresponding accessibility element to accessibilityOrderedElements
+                if let chart = dataProvider as? BarChartView
+                {
+                    let element = createAccessibleElement(withIndex: index,
+                                                          container: chart,
+                                                          dataSet: dataSet,
+                                                          dataSetIndex: index,
+                                                          stackSize: stackSize)
+                    { (element) in
+                        element.accessibilityFrame = barRect
+                    }
+                    
+                    accessibilityOrderedElements[index/stackSize].append(element)
+                }
+                
+            }
+        
+            
+            if drawBorder
+            {
+                context.setStrokeColor(borderColor.cgColor)
+                context.setLineWidth(borderWidth)
+                context.addPath(path.cgPath)
+                context.strokePath()
             }
             
-            // Create and append the corresponding accessibility element to accessibilityOrderedElements (see BarChartRenderer)
-            if let chart = dataProvider as? BarChartView
-            {
-                let element = createAccessibleElement(withIndex: j,
-                                                      container: chart,
-                                                      dataSet: dataSet,
-                                                      dataSetIndex: index,
-                                                      stackSize: stackSize)
-                { (element) in
-                    element.accessibilityFrame = barRect
-                }
-
-                accessibilityOrderedElements[j/stackSize].append(element)
-            }
+            context.restoreGState()
         }
         
         context.restoreGState()
@@ -705,18 +721,11 @@ open class HorizontalBarChartRenderer: BarChartRenderer
                 
                 setHighlightDrawPos(highlight: high, barRect: barRect)
                 
-                if (!set.roundedCorners.isEmpty)
-                {
-                    let cornerRadius = barRect.width / 2.0
-                    let path = UIBezierPath.init(roundedRect: barRect,
-                                                 byRoundingCorners: UIRectCorner.topRight.union(UIRectCorner.bottomRight),
-                                                 cornerRadii: CGSize(width: cornerRadius, height: cornerRadius))
-                    path.fill()
-                }
-                else
-                {
-                    context.fill(barRect)
-                }
+                let cornerRadius = barRect.width / 2.0
+                let path = UIBezierPath.init(roundedRect: barRect,
+                                             byRoundingCorners: set.roundedCorners,
+                                             cornerRadii: CGSize(width: cornerRadius, height: cornerRadius))
+                path.fill()
             }
         }
         
