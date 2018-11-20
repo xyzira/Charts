@@ -248,21 +248,26 @@ open class HorizontalBarChartRenderer: BarChartRenderer
         let isStacked = dataSet.isStacked
         let stackSize = isStacked ? dataSet.stackSize : 1
 
-        // Order is important here
         for firstIndexInBar in stride(from: 0, to: buffer.rects.count, by: stackSize)
         {
             context.saveGState()
             
             let lastIndexInBar = firstIndexInBar + stackSize - 1
-            let firstRectInBar = buffer.rects[firstIndexInBar]
-            let cornerRadius = firstRectInBar.width / 2.0
             
-            var pathRect = firstRectInBar
+            // finding most left rect in bar
+            var leftRectInBar = buffer.rects[firstIndexInBar]
+            if buffer.rects[lastIndexInBar].origin.x < leftRectInBar.origin.x {
+                leftRectInBar = buffer.rects[index]
+            }
+            
             var width: CGFloat = 0
             for index in firstIndexInBar...lastIndexInBar {
                 width += buffer.rects[index].width
             }
+            
+            var pathRect = leftRectInBar
             pathRect.size.width = width
+            let cornerRadius = leftRectInBar.width / 2.0
             
             let path = UIBezierPath.init(roundedRect: pathRect,
                                          byRoundingCorners: dataSet.roundedCorners,

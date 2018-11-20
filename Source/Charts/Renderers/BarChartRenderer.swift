@@ -414,21 +414,26 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
         let isStacked = dataSet.isStacked
         let stackSize = isStacked ? dataSet.stackSize : 1
 
-        // Order is important here
         for firstIndexInBar in stride(from: 0, to: buffer.rects.count, by: stackSize)
         {
             context.saveGState()
             
             let lastIndexInBar = firstIndexInBar + stackSize - 1
-            let lastRectInBar = buffer.rects[lastIndexInBar]
-            let cornerRadius = lastRectInBar.width / 2.0
             
-            var pathRect = lastRectInBar
+            // finding top rect in bar
+            var topRectInBar = buffer.rects[firstIndexInBar]
+            if buffer.rects[lastIndexInBar].origin.y < topRectInBar.origin.y {
+                topRectInBar = buffer.rects[lastIndexInBar]
+            }
+            
             var height: CGFloat = 0
             for index in firstIndexInBar...lastIndexInBar {
                 height += buffer.rects[index].height
             }
+            
+            var pathRect = topRectInBar
             pathRect.size.height = height
+            let cornerRadius = topRectInBar.width / 2.0
             
             let path = UIBezierPath.init(roundedRect: pathRect,
                                          byRoundingCorners: dataSet.roundedCorners,
