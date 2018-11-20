@@ -409,6 +409,10 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
         
         context.setStrokeColor(borderColor.cgColor)
         context.setLineWidth(borderWidth)
+        context.setLineCap(.square)
+        
+        context.setStrokeColor(borderColor.cgColor)
+        context.setLineWidth(borderWidth)
 
         // In case the chart is stacked, we need to accomodate individual bars within accessibilityOrdereredElements
         let isStacked = dataSet.isStacked
@@ -466,6 +470,10 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                 context.addRect(barRect)
                 context.fillPath()
                 
+                if drawBorder {
+                    context.stroke(barRect)
+                }
+                
                 // Create and append the corresponding accessibility element to accessibilityOrderedElements
                 if let chart = dataProvider as? BarChartView
                 {
@@ -483,15 +491,13 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                 
             }
             
+            context.restoreGState()
+            
             if drawBorder
             {
-                context.setStrokeColor(borderColor.cgColor)
-                context.setLineWidth(borderWidth)
                 context.addPath(path.cgPath)
                 context.strokePath()
             }
-            
-            context.restoreGState() 
         }
         
         context.restoreGState()
