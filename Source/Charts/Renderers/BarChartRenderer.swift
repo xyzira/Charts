@@ -424,25 +424,14 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
             
             let lastIndexInBar = firstIndexInBar + stackSize - 1
             
-            // finding top rect in bar
-            var topRectInBar = buffer.rects[firstIndexInBar]
-            if buffer.rects[lastIndexInBar].origin.y < topRectInBar.origin.y {
-                topRectInBar = buffer.rects[lastIndexInBar]
-            }
-            
-            var height: CGFloat = 0
-            for index in firstIndexInBar...lastIndexInBar {
-                height += buffer.rects[index].height
-            }
-            
-            var pathRect = topRectInBar
-            pathRect.size.height = height
-            let cornerRadius = topRectInBar.width / 2.0
-            
-            let path = UIBezierPath.init(roundedRect: pathRect,
-                                         byRoundingCorners: dataSet.roundedCorners,
-                                         cornerRadii: CGSize(width: cornerRadius,
-                                                             height: cornerRadius))
+
+            let topRectInBar = findTopRectInBar(
+                barRects: buffer.rects,
+                firstIndexInBar: firstIndexInBar,
+                lastIndexInBar: lastIndexInBar
+            )
+
+            let path = createBarPath(for: topRectInBar, roundedCorners: dataSet.roundedCorners)
             
             context.addPath(path.cgPath)
             context.clip()
@@ -850,16 +839,23 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                     y1 = e.y
                     y2 = 0.0
                 }
-                
-                prepareBarHighlight(x: e.x, y1: y1, y2: y2, barWidthHalf: barData.barWidth / 2.0, trans: trans, rect: &barRect)
-                
-                setHighlightDrawPos(highlight: high, barRect: barRect)
-               
+
+                prepareBarHighlight(x: e.x, y1: e.positiveSum, y2: -e.negativeSum, barWidthHalf: barData.barWidth / 2.0, trans: trans, rect: &barRect)
+
+                var highlightRect = CGRect()
+                prepareBarHighlight(x: e.x, y1: y1, y2: y2, barWidthHalf: barData.barWidth / 2.0, trans: trans, rect: &highlightRect)
+                setHighlightDrawPos(highlight: high, barRect: highlightRect)
+
                 let cornerRadius = barRect.width / 2.0
-                let path = UIBezierPath.init(roundedRect: barRect,
-                                             byRoundingCorners: set.roundedCorners,
-                                             cornerRadii: CGSize(width: cornerRadius, height: cornerRadius))
-                path.fill()
+                let path = createBarPath(for: barRect, roundedCorners: set.roundedCorners)
+
+                context.saveGState()
+
+                context.addPath(path.cgPath)
+                context.clip()
+                context.fill(highlightRect)
+
+                context.restoreGState()
             }
         }
         
@@ -948,5 +944,34 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
         modifier(element)
 
         return element
+    }
+
+    private func findTopRectInBar(barRects: [CGRect], firstIndexInBar: Int, lastIndexInBar: Int) -> CGRect {
+        var topRectInBar = barRects[firstIndexInBar]
+        if barRects[lastIndexInBar].origin.y < topRectInBar.origin.y {
+            topRectInBar = barRects[lastIndexInBar]
+        }
+
+        var height: CGFloat = 0
+        for index in firstIndexInBar...lastIndexInBar {
+            height += barRects[index].height
+        }
+
+        topRectInBar.size.height = height
+
+        return topRectInBar
+    }
+
+    private func createBarPath(for rect: CGRect, roundedCorners: UIRectCorner) -> UIBezierPath {
+
+        let cornerRadius = rect.height / 2.0
+
+        let path = UIBezierPath.init(
+            roundedRect: rect,
+            byRoundingCorners: roundedCorners,
+            cornerRadii: CGSize(width: cornerRadius, height: cornerRadius)
+        )
+
+        return path
     }
 }

@@ -248,7 +248,7 @@ open class HorizontalBarChartRenderer: BarChartRenderer
         context.setLineWidth(borderWidth)
         context.setLineCap(.square)
 
-        // In case the chart is stacked, we need to accomodate individual bars within accessibilityOrdereredElements
+        // In case the chart is stacked, we need to accomodate individual bars within accessibilityOrderedElements
         let isStacked = dataSet.isStacked
         let stackSize = isStacked ? dataSet.stackSize : 1
 
@@ -757,10 +757,11 @@ open class HorizontalBarChartRenderer: BarChartRenderer
 
         let cornerRadius = rect.height / 2.0
 
-        let path = UIBezierPath.init(roundedRect: rect,
+        let path = UIBezierPath.init(
+            roundedRect: rect,
             byRoundingCorners: roundedCorners,
-            cornerRadii: CGSize(width: cornerRadius,
-                height: cornerRadius))
+            cornerRadii: CGSize(width: cornerRadius, height: cornerRadius)
+        )
 
         return path
     }
