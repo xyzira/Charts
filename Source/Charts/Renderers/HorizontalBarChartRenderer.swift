@@ -257,26 +257,14 @@ open class HorizontalBarChartRenderer: BarChartRenderer
             context.saveGState()
             
             let lastIndexInBar = firstIndexInBar + stackSize - 1
-            
-            // finding most left rect in bar
-            var leftRectInBar = buffer.rects[firstIndexInBar]
-            if buffer.rects[lastIndexInBar].origin.x < leftRectInBar.origin.x {
-                leftRectInBar = buffer.rects[index]
-            }
-            
-            var width: CGFloat = 0
-            for index in firstIndexInBar...lastIndexInBar {
-                width += buffer.rects[index].width
-            }
-            
-            var pathRect = leftRectInBar
-            pathRect.size.width = width
-            let cornerRadius = leftRectInBar.height / 2.0
-            
-            let path = UIBezierPath.init(roundedRect: pathRect,
-                                         byRoundingCorners: dataSet.roundedCorners,
-                                         cornerRadii: CGSize(width: cornerRadius,
-                                                             height: cornerRadius))
+
+            let leftRectInBar = findMostLeftRectInBar(
+                barRects: buffer.rects,
+                firstIndexInBar: firstIndexInBar,
+                lastIndexInBar: lastIndexInBar
+            )
+
+            let path = createBarPath(for: leftRectInBar, roundedCorners: dataSet.roundedCorners)
             
             context.addPath(path.cgPath)
             context.clip()
@@ -716,7 +704,7 @@ open class HorizontalBarChartRenderer: BarChartRenderer
                     else
                     {
                         let range = e.ranges?[high.stackIndex]
-                        
+
                         y1 = range?.from ?? 0.0
                         y2 = range?.to ?? 0.0
                     }
@@ -726,19 +714,54 @@ open class HorizontalBarChartRenderer: BarChartRenderer
                     y1 = e.y
                     y2 = 0.0
                 }
+
+                prepareBarHighlight(x: e.x, y1: e.positiveSum, y2: -e.negativeSum, barWidthHalf: barData.barWidth / 2.0, trans: trans, rect: &barRect)
+
+                var highlightRect = CGRect()
+                prepareBarHighlight(x: e.x, y1: y1, y2: y2, barWidthHalf: barData.barWidth / 2.0, trans: trans, rect: &highlightRect)
+                setHighlightDrawPos(highlight: high, barRect: highlightRect)
                 
-                prepareBarHighlight(x: e.x, y1: y1, y2: y2, barWidthHalf: barData.barWidth / 2.0, trans: trans, rect: &barRect)
-                
-                setHighlightDrawPos(highlight: high, barRect: barRect)
-                
-                let cornerRadius = barRect.width / 2.0
-                let path = UIBezierPath.init(roundedRect: barRect,
-                                             byRoundingCorners: set.roundedCorners,
-                                             cornerRadii: CGSize(width: cornerRadius, height: cornerRadius))
-                path.fill()
+                let cornerRadius = barRect.height / 2.0
+                let path = createBarPath(for: barRect, roundedCorners: set.roundedCorners)
+
+                context.saveGState()
+
+                context.addPath(path.cgPath)
+                context.clip()
+                context.fill(highlightRect)
+
+                context.restoreGState()
             }
         }
         
         context.restoreGState()
+    }
+
+    private func findMostLeftRectInBar(barRects: [CGRect], firstIndexInBar: Int, lastIndexInBar: Int) -> CGRect {
+        var leftRectInBar = barRects[firstIndexInBar]
+        if barRects[lastIndexInBar].origin.x < leftRectInBar.origin.x {
+            leftRectInBar = barRects[lastIndexInBar]
+        }
+
+        var width: CGFloat = 0
+        for index in firstIndexInBar...lastIndexInBar {
+            width += barRects[index].width
+        }
+
+        leftRectInBar.size.width = width
+
+        return leftRectInBar
+    }
+
+    private func createBarPath(for rect: CGRect, roundedCorners: UIRectCorner) -> UIBezierPath {
+
+        let cornerRadius = rect.height / 2.0
+
+        let path = UIBezierPath.init(roundedRect: rect,
+            byRoundingCorners: roundedCorners,
+            cornerRadii: CGSize(width: cornerRadius,
+                height: cornerRadius))
+
+        return path
     }
 }
