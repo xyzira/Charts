@@ -271,7 +271,7 @@ open class HorizontalBarChartRenderer: BarChartRenderer
             
             var pathRect = leftRectInBar
             pathRect.size.width = width
-            let cornerRadius = leftRectInBar.width / 2.0
+            let cornerRadius = leftRectInBar.height / 2.0
             
             let path = UIBezierPath.init(roundedRect: pathRect,
                                          byRoundingCorners: dataSet.roundedCorners,
