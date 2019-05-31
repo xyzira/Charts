@@ -846,7 +846,6 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                 prepareBarHighlight(x: e.x, y1: y1, y2: y2, barWidthHalf: barData.barWidth / 2.0, trans: trans, rect: &highlightRect)
                 setHighlightDrawPos(highlight: high, barRect: highlightRect)
 
-                let cornerRadius = barRect.width / 2.0
                 let path = createBarPath(for: barRect, roundedCorners: set.roundedCorners)
 
                 context.saveGState()
@@ -964,7 +963,7 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
 
     private func createBarPath(for rect: CGRect, roundedCorners: UIRectCorner) -> UIBezierPath {
 
-        let cornerRadius = rect.height / 2.0
+        let cornerRadius = rect.width / 2.0
 
         let path = UIBezierPath.init(
             roundedRect: rect,
